@@ -2,41 +2,47 @@ import rospy
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 
-# Initialiser un nœud ROS
-rospy.init_node('circle_movement')
-
-# Créer un publisher pour les commandes de vitesse
-pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-rate = rospy.Rate(10)  # 10 Hz
-
-# Définir la vitesse et le rayon du cercle
-velocity_msg = Twist()
-velocity_msg.linear.x = 0.2  # Vitesse linéaire (m/s)
-velocity_msg.angular.z = 0.5  # Vitesse angulaire (rad/s)
-
-# Fonction de callback pour les données LIDAR
 def lidar_callback(data):
     global velocity_msg
-    # Déterminer si un obstacle est détecté dans une certaine plage
-    if min(data.ranges) < 0.5:  # par exemple, moins de 0.5 mètre
-        # Arrêter le robot
+    # Trouver la distance la plus proche dans les données du LIDAR
+    closest_distance = min(data.ranges)
+    # Vérifier si cette distance est entre 0.2 m et 0.5 m
+    if 0.2 <= closest_distance < 0.5:
+        # Arrêter le robot si un obstacle est détecté dans cette plage
         velocity_msg.linear.x = 0
         velocity_msg.angular.z = 0
     else:
-        # Sinon, continuer à avancer
+        # Sinon, continuer à avancer en cercle
         velocity_msg.linear.x = 0.2
         velocity_msg.angular.z = 0.5
 
-# Souscrire au topic LIDAR
-lidar_sub = rospy.Subscriber('/scan', LaserScan, lidar_callback)
+def main():
+    # Initialiser un nœud ROS
+    rospy.init_node('circle_movement')
 
-# Boucle principale
-try:
-    while not rospy.is_shutdown():
+    # Créer un publisher pour les commandes de vitesse
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    rate = rospy.Rate(10)  # 10 Hz
+
+    # Définir la vitesse et le rayon du cercle
+    global velocity_msg
+    velocity_msg = Twist()
+    velocity_msg.linear.x = 0.2  # Vitesse linéaire (m/s)
+    velocity_msg.angular.z = 0.5  # Vitesse angulaire (rad/s)
+
+    # Souscrire au topic LIDAR
+    rospy.Subscriber('/scan', LaserScan, lidar_callback)
+
+    # Boucle principale
+    try:
+        while not rospy.is_shutdown():
+            pub.publish(velocity_msg)
+            rate.sleep()
+    finally:
+        # Pour arrêter le robot, envoyez une vitesse nulle
+        velocity_msg.linear.x = 0
+        velocity_msg.angular.z = 0
         pub.publish(velocity_msg)
-        rate.sleep()
-finally:
-    # Pour arrêter le robot, envoyez une vitesse nulle
-    velocity_msg.linear.x = 0
-    velocity_msg.angular.z = 0
-    pub.publish(velocity_msg)
+
+if __name__ == '__main__':
+    main()
