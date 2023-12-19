@@ -14,29 +14,31 @@ velocity_msg = Twist()
 velocity_msg.linear.x = 0.2  # Vitesse linéaire (m/s)
 velocity_msg.angular.z = 0.5  # Vitesse angulaire (rad/s)
 
-# Fonction de callback pour les données LIDAR
+# Flag pour le contrôle d'obstacle
+obstacle_detected = False
+
 def lidar_callback(data):
-    global velocity_msg
-    # Déterminer si un obstacle est détecté dans une certaine plage
-    if min(data.ranges) < 0.5:  # par exemple, moins de 0.5 mètre
-        # Arrêter le robot
-        velocity_msg.linear.x = 0
-        velocity_msg.angular.z = 0
+    global obstacle_detected
+    # Vérifier si un obstacle est détecté dans une certaine plage
+    # par exemple, à moins de 0.5 mètre devant le robot
+    if min(data.ranges) < 0.5:
+        obstacle_detected = True
     else:
-        # Sinon, continuer à avancer
-        velocity_msg.linear.x = 0.2
-        velocity_msg.angular.z = 0.5
+        obstacle_detected = False
 
 # Souscrire au topic LIDAR
 lidar_sub = rospy.Subscriber('/scan', LaserScan, lidar_callback)
 
-# Boucle principale
-try:
-    while not rospy.is_shutdown():
-        pub.publish(velocity_msg)
-        rate.sleep()
-finally:
-    # Pour arrêter le robot, envoyez une vitesse nulle
-    velocity_msg.linear.x = 0
-    velocity_msg.angular.z = 0
+# Envoyer les commandes de mouvement dans une boucle
+while not rospy.is_shutdown():
+    if obstacle_detected:
+        # Arrêter le robot si un obstacle est détecté
+        velocity_msg.linear.x = 0
+        velocity_msg.angular.z = 0
     pub.publish(velocity_msg)
+    rate.sleep()
+
+# Pour arrêter le robot, envoyez une vitesse nulle
+velocity_msg.linear.x = 0
+velocity_msg.angular.z = 0
+pub.publish(velocity_msg)
