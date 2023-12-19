@@ -1,0 +1,52 @@
+import rospy
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import LaserScan
+
+def lidar_callback(data):
+    global state
+    # Déterminer si un obstacle est devant
+    if min(data.ranges) < 0.5:  # Obstacle à moins de 50 cm
+        state = 'avoid_obstacle'
+    else:
+        state = 'go_straight'
+
+def avoid_obstacle():
+    global velocity_msg
+    # Tourner à droite par exemple
+    velocity_msg.linear.x = 0.1  # Réduire la vitesse
+    velocity_msg.angular.z = -0.5  # Tourner
+
+def go_straight():
+    global velocity_msg
+    # Aller tout droit
+    velocity_msg.linear.x = 0.5
+    velocity_msg.angular.z = 0
+
+def main():
+    global velocity_msg, state
+    state = 'go_straight'
+
+    rospy.init_node('robot_navigation')
+
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    rospy.Subscriber('/scan', LaserScan, lidar_callback)
+
+    rate = rospy.Rate(10)
+    velocity_msg = Twist()
+
+    try:
+        while not rospy.is_shutdown():
+            if state == 'avoid_obstacle':
+                avoid_obstacle()
+            elif state == 'go_straight':
+                go_straight()
+            
+            pub.publish(velocity_msg)
+            rate.sleep()
+    finally:
+        velocity_msg.linear.x = 0
+        velocity_msg.angular.z = 0
+        pub.publish(velocity_msg)
+
+if __name__ == '__main__':
+    main()
