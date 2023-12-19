@@ -2,43 +2,51 @@ import rospy
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 
-# Initialiser un nœud ROS
-rospy.init_node('circle_movement')
-
-# Créer un publisher pour les commandes de vitesse
-pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-rate = rospy.Rate(10)  # 10 Hz
-
-# Définir la vitesse et le rayon du cercle
-velocity_msg = Twist()
-velocity_msg.linear.x = 0.2  # Vitesse linéaire (m/s)
-velocity_msg.angular.z = 0.5  # Vitesse angulaire (rad/s)
-
-# Flag pour le contrôle d'obstacle
-obstacle_detected = False
-
 def lidar_callback(data):
     global obstacle_detected
     # Vérifier si un obstacle est détecté dans une certaine plage
-    # par exemple, à moins de 0.5 mètre devant le robot
-    if min(data.ranges) < 0.5:
+    if min(data.ranges) < 0.5:  # moins de 0.5 mètre
         obstacle_detected = True
     else:
         obstacle_detected = False
 
-# Souscrire au topic LIDAR
-lidar_sub = rospy.Subscriber('/scan', LaserScan, lidar_callback)
+def main():
+    global obstacle_detected
+    obstacle_detected = False
 
-# Envoyer les commandes de mouvement dans une boucle
-while not rospy.is_shutdown():
-    if obstacle_detected:
-        # Arrêter le robot si un obstacle est détecté
-        velocity_msg.linear.x = 0
-        velocity_msg.angular.z = 0
+    # Initialiser un nœud ROS
+    rospy.init_node('circle_movement')
+
+    # Créer un publisher pour les commandes de vitesse
+    pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+    rate = rospy.Rate(10)  # 10 Hz
+
+    # Définir la vitesse et le rayon du cercle
+    velocity_msg = Twist()
+    velocity_msg.linear.x = 0.2  # Vitesse linéaire (m/s)
+    velocity_msg.angular.z = 0.5  # Vitesse angulaire (rad/s)
+
+    # Souscrire au topic LIDAR
+    rospy.Subscriber('/scan', LaserScan, lidar_callback)
+
+    # Boucle principale
+    while not rospy.is_shutdown():
+        if obstacle_detected:
+            # Arrêter le robot si un obstacle est détecté
+            velocity_msg.linear.x = 0
+            velocity_msg.angular.z = 0
+        else:
+            # Sinon, continuer à avancer
+            velocity_msg.linear.x = 0.2
+            velocity_msg.angular.z = 0.5
+
+        pub.publish(velocity_msg)
+        rate.sleep()
+
+    # Pour arrêter le robot, envoyez une vitesse nulle
+    velocity_msg.linear.x = 0
+    velocity_msg.angular.z = 0
     pub.publish(velocity_msg)
-    rate.sleep()
 
-# Pour arrêter le robot, envoyez une vitesse nulle
-velocity_msg.linear.x = 0
-velocity_msg.angular.z = 0
-pub.publish(velocity_msg)
+if __name__ == '__main__':
+    main()
