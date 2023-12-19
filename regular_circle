@@ -21,7 +21,7 @@ rate = rospy.Rate(10)  # 10 Hz
 #Définir la vitesse et le rayon du cercle
 velocity_msg = Twist()
 velocity_msg.linear.x = 0.2  # Vitesse linéaire (m/s)
-velocity_msg.angular.z = 0.5  # Vitesse angulaire (rad/s)
+velocity_msg.angular.z = 1  # Vitesse angulaire (rad/s)
 
 
 
