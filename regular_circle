@@ -32,7 +32,7 @@ while not rospy.is_shutdown():
 
 
 
-#Pour arrêter le robot, envoyez une vitesse nulle
+#Pour arrêter le robot, envoi d'une vitesse nulle
 velocity_msg.linear.x = 0
 velocity_msg.angular.z = 0
 pub.publish(velocity_msg)
